@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Política de segurança: só carrega recursos locais e só fala com a API. -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; style-src 'self';
+                 img-src 'self' data:; connect-src 'self' http://localhost:8000 http://127.0.0.1:8000;
+                 base-uri 'self'; form-action 'self'; object-src 'none'">
+  <meta name="referrer" content="no-referrer">
+  <title>Tarefas</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232f5d50'/%3E%3Cpath d='M9 16.5l4.5 4.5L23 11.5' stroke='%23fff' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/styles.css">
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Pular para o conteúdo</a>
+
+  <!-- ===================== AUTENTICAÇÃO ===================== -->
+  <main id="main">
+    <section id="auth-view" class="auth" hidden>
+      <div class="auth__brand">
+        <span class="logo" aria-hidden="true">✓</span>
+        <h1>Tarefas</h1>
+        <p>Organize o que precisa ser feito, num lugar só.</p>
+      </div>
+
+      <div class="card auth__card">
+        <div class="tabs" role="tablist" aria-label="Acesso">
+          <button class="tabs__btn" role="tab" id="tab-login"
+                  aria-controls="login-form" aria-selected="true">Entrar</button>
+          <button class="tabs__btn" role="tab" id="tab-register"
+                  aria-controls="register-form" aria-selected="false">Criar conta</button>
+        </div>
+
+        <form id="login-form" class="form" role="tabpanel" aria-labelledby="tab-login" novalidate>
+          <label class="field">
+            <span>E-mail</span>
+            <input type="email" name="email" autocomplete="email" required maxlength="255">
+          </label>
+          <label class="field">
+            <span>Senha</span>
+            <input type="password" name="senha" autocomplete="current-password" required maxlength="72">
+          </label>
+          <p class="form__error" role="alert" aria-live="polite"></p>
+          <button type="submit" class="btn btn--primary btn--block">Entrar</button>
+        </form>
+
+        <form id="register-form" class="form" role="tabpanel" aria-labelledby="tab-register" hidden novalidate>
+          <label class="field">
+            <span>Nome</span>
+            <input type="text" name="nome" autocomplete="name" required minlength="2" maxlength="100">
+          </label>
+          <label class="field">
+            <span>E-mail</span>
+            <input type="email" name="email" autocomplete="email" required maxlength="255">
+          </label>
+          <label class="field">
+            <span>Senha</span>
+            <input type="password" name="senha" autocomplete="new-password" required minlength="8" maxlength="72"
+                   aria-describedby="senha-hint">
+            <small id="senha-hint">Mínimo de 8 caracteres, com letras e números.</small>
+          </label>
+          <label class="field">
+            <span>Confirmar senha</span>
+            <input type="password" name="confirmacao" autocomplete="new-password" required maxlength="72">
+          </label>
+          <p class="form__error" role="alert" aria-live="polite"></p>
+          <button type="submit" class="btn btn--primary btn--block">Criar conta</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ===================== TAREFAS ===================== -->
+    <section id="app-view" class="app" hidden>
+      <header class="topbar">
+        <div class="topbar__brand">
+          <span class="logo logo--sm" aria-hidden="true">✓</span>
+          <span>Tarefas</span>
+        </div>
+        <div class="topbar__user">
+          <span id="user-name" class="topbar__name"></span>
+          <button id="logout-btn" class="btn btn--ghost">Sair</button>
+        </div>
+      </header>
+
+      <div class="layout">
+        <aside class="card new-task">
+          <h2>Nova tarefa</h2>
+          <form id="task-form" class="form" novalidate>
+            <label class="field">
+              <span>Título</span>
+              <input type="text" name="titulo" required maxlength="120" placeholder="Ex.: Revisar relatório">
+            </label>
+            <label class="field">
+              <span>Descrição <em>(opcional)</em></span>
+              <textarea name="descricao" rows="3" maxlength="1000" placeholder="Detalhes, links, observações…"></textarea>
+            </label>
+            <label class="field">
+              <span>Status</span>
+              <select name="status">
+                <option value="pendente">Pendente</option>
+                <option value="em_andamento">Em andamento</option>
+                <option value="concluida">Concluída</option>
+              </select>
+            </label>
+            <p class="form__error" role="alert" aria-live="polite"></p>
+            <button type="submit" class="btn btn--primary btn--block">Adicionar</button>
+          </form>
+        </aside>
+
+        <section class="tasks" aria-labelledby="tasks-title">
+          <div class="tasks__head">
+            <h2 id="tasks-title">Minhas tarefas</h2>
+            <p id="summary" class="tasks__summary"></p>
+          </div>
+
+          <div class="toolbar">
+            <div class="chips" role="group" aria-label="Filtrar por status">
+              <button class="chip is-active" data-status="">Todas</button>
+              <button class="chip" data-status="pendente">Pendentes</button>
+              <button class="chip" data-status="em_andamento">Em andamento</button>
+              <button class="chip" data-status="concluida">Concluídas</button>
+            </div>
+            <div class="toolbar__right">
+              <input id="search" type="search" class="search" placeholder="Buscar…"
+                     aria-label="Buscar tarefas" maxlength="100">
+              <select id="order" aria-label="Ordenação">
+                <option value="recentes">Mais recentes</option>
+                <option value="antigas">Mais antigas</option>
+              </select>
+            </div>
+          </div>
+
+          <ul id="task-list" class="task-list" aria-live="polite"></ul>
+          <div id="empty-state" class="empty" hidden>
+            <p class="empty__title">Nada por aqui.</p>
+            <p id="empty-text">Crie sua primeira tarefa no painel ao lado.</p>
+          </div>
+          <div id="loading" class="loading" hidden>Carregando…</div>
+          <button id="load-more" class="btn btn--ghost btn--block" hidden>Carregar mais</button>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===================== MODAL DE EDIÇÃO ===================== -->
+  <dialog id="edit-dialog" class="dialog" aria-labelledby="edit-title">
+    <form id="edit-form" class="form" method="dialog" novalidate>
+      <h2 id="edit-title">Editar tarefa</h2>
+      <input type="hidden" name="tarefa_id">
+      <label class="field">
+        <span>Título</span>
+        <input type="text" name="titulo" required maxlength="120">
+      </label>
+      <label class="field">
+        <span>Descrição</span>
+        <textarea name="descricao" rows="4" maxlength="1000"></textarea>
+      </label>
+      <label class="field">
+        <span>Status</span>
+        <select name="status">
+          <option value="pendente">Pendente</option>
+          <option value="em_andamento">Em andamento</option>
+          <option value="concluida">Concluída</option>
+        </select>
+      </label>
+      <p class="form__error" role="alert" aria-live="polite"></p>
+      <div class="dialog__actions">
+        <button type="button" class="btn btn--ghost" data-close>Cancelar</button>
+        <button type="submit" class="btn btn--primary">Salvar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- ===================== CONFIRMAÇÃO ===================== -->
+  <dialog id="confirm-dialog" class="dialog dialog--sm" aria-labelledby="confirm-title">
+    <form method="dialog" class="form">
+      <h2 id="confirm-title">Excluir tarefa?</h2>
+      <p id="confirm-text" class="muted"></p>
+      <div class="dialog__actions">
+        <button value="cancel" class="btn btn--ghost">Cancelar</button>
+        <button value="confirm" class="btn btn--danger">Excluir</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toasts" class="toasts" role="status" aria-live="polite"></div>
+</body>
+</html>
